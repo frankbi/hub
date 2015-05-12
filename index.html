@@ -1,0 +1,266 @@
+<html>
+<head>
+	<title></title>
+	<style>
+
+
+	@import url(http://fonts.googleapis.com/css?family=Roboto+Condensed:400,300,700);
+
+	.cf:before, .cf:after {
+	    content: " "; /* 1 */
+	    display: table; /* 2 */
+	}
+
+	.cf:after {
+	    clear: both;
+	}
+
+	.cf {
+	    *zoom: 1;
+	}
+
+	* {
+		margin: 0px;
+		padding: 0px;
+	}
+
+	body {
+		background-color: lightgray;
+	}
+
+	#interactive {
+		text-align: center;
+	}
+
+	#tooltip {
+		background-color: white;
+		padding: 5px;
+		text-align: left;
+	 	/*box-shadow: 3px 3px 5px #888888;*/
+	}
+
+	</style>
+</head>
+<body>
+	<div id="interactive"></div>
+	<p style="margin-left: 50px">Green: 2010-11</p>
+	<p style="margin-left: 50px">Red: 2011-12</p>
+	<p style="margin-left: 50px">Purple: 2012-13</p>
+	<p style="margin-left: 50px">Blue: 2013-14</p>
+	<script type="text/javascript" src="js/d3.min.js"></script>
+	<script type="text/javascript" src="js/jquery-1.9.1.min.js"></script>
+	<script type="text/javascript" src="js/handlebars-v1.3.0.js"></script>
+	<script type="text/x-handlebars-template" id="tooltip-template">
+
+		<div class="inner-tooltip">
+			<p>{{ industry }}</p>
+			<p>spc: <strong>{{ spc }}</strong></p>
+			<p>npm: <strong>{{ npm }}</strong></p>
+			<p>year: <strong>{{ year }}</strong></p>
+		</div>
+
+	</script>
+
+	<script type="text/javascript">
+
+		// var width = 700, height = 100;
+
+		// var svgContainer = d3.select("body").append("svg")
+		// 						.attr("width", width)
+		// 						.attr("height", height);
+
+		// var axisScale = d3.scale.linear()
+		// 					.domain([0, height])
+		// 					.range([0, width]);
+
+		// var xAxis = d3.svg.axis()
+		// 				.scale(axisScale);
+
+		// var xAxisGroup = svgContainer.append("g")
+		// 					.call(xAxis);
+
+		// "industry_name": d.industry_name,
+		// "industry_code": d.industry_code,
+		// "avg_sales_pct_change_5_year": +d.avg_sales_pct_change_5_year,
+		// "avg_npm_5_year": +d.avg_npm_5_year,
+		// "npm_1011": +d.npm_1011,
+		// "npm_1112": +d.npm_1112,
+		// "npm_1213": +d.npm_1213,
+		// "npm_1314": +d.npm_1314,
+		// "sales_pct_change_1011": +d.sales_pct_change_1011,
+		// "sales_pct_change_1112": +d.sales_pct_change_1112,
+		// "sales_pct_change_1213": +d.sales_pct_change_1213,
+		// "sales_pct_change_1314": +d.sales_pct_change_1314
+
+
+		var width = 600, height = 420;
+
+		d3.csv("data/data.csv")
+			.row(function(d) { return d; })
+			.get(function(e, data) {
+
+				var npm_array = [],
+					spc_array = [];
+
+				for (var i = 0; i < data.length; i++) {
+					for (var k in data[0]) {
+						if (k.indexOf("npm") == 0) { npm_array.push(+data[i][k]); }
+						if (k.indexOf("spc") == 0) { spc_array.push(+data[i][k]); }
+					}
+				}
+
+
+				var circle_radius = 5;
+				var circle_opacity = 0.42;
+
+				var padding_left = 100;
+				var padding_top = 10;
+
+				var xScale = d3.scale.linear()
+								.domain([d3.min(npm_array), d3.max(npm_array)])
+								.range([padding_left, width]);
+
+				var yScale = d3.scale.linear()
+								.domain([d3.min(spc_array), d3.max(spc_array)])
+								.range([padding_top, height]);
+
+
+				var chart = d3.select("#interactive")
+								.append("svg")
+								.attr("width", width)
+								.attr("height", height)
+								.attr("class", "chart");
+
+				var tooltip = d3.select("#interactive")
+								.append("div")
+								.attr("id", "tooltip")
+								.attr("class", "cf")
+								.style("position", "absolute")
+								.style("z-index", "10")
+								.style("visibility", "hidden");
+
+				chart.append("svg:rect")
+						.attr("width", "100%")
+						.attr("height", "100%")
+						.attr("fill", "#FFFAFA");
+
+				var point1 = chart.selectAll(".point")
+								.data(data)
+							  .enter().append("circle")
+							  	.attr("cx", function(d) { return xScale(d.npm_1011); })
+							  	.attr("cy", function(d) { return yScale(d.spc_1011); })
+							  	.attr("r", function(d) { return circle_radius; })
+							  	.style("opacity", circle_opacity)
+								.style("fill", "green")
+								.on("mousemove", function(d) {
+
+							  		tooltip.style("visibility", "visible");
+							  		tooltip.transition()
+							  			.duration(100);
+
+							  		tooltip.html(function() {
+							  			var source = $("#tooltip-template").html();
+							  			var template = Handlebars.compile(source);
+							  			return template({
+							  				"industry": d.industry_name,
+							  				"npm": (d.npm_1011 * 100) + "%",
+							  				"spc": (d.spc_1011 * 100) + "%",
+							  				"year": "2010-11"
+							  			});
+							  		})
+							  		.style("left", (d3.event.pageX) + 30 + "px")
+							  		.style("top", (d3.event.pageY) + "px");
+
+								});
+
+				var point2 = chart.selectAll(".point")
+								.data(data)
+							  .enter().append("circle")
+							  	.attr("cx", function(d) { return xScale(d.npm_1112); })
+							  	.attr("cy", function(d) { return yScale(d.spc_1112); })
+							  	.attr("r", function(d) { return circle_radius; })
+							  	.style("opacity", circle_opacity)
+								.style("fill", "red")
+								.on("mousemove", function(d) {
+							  		tooltip.style("visibility", "visible");
+							  		tooltip.transition()
+							  			.duration(100);
+
+							  		tooltip.html(function() {
+							  			var source = $("#tooltip-template").html();
+							  			var template = Handlebars.compile(source);
+							  			return template({
+							  				"industry": d.industry_name,
+							  				"npm": (d.npm_1112 * 100) + "%",
+							  				"spc": (d.spc_1112 * 100) + "%",
+							  				"year": "2011-12"
+							  			});
+							  		})
+							  		.style("left", (d3.event.pageX) + 30 + "px")
+							  		.style("top", (d3.event.pageY) + "px");
+								});
+
+				var point3 = chart.selectAll(".point")
+								.data(data)
+							  .enter().append("circle")
+							  	.attr("cx", function(d) { return xScale(d.npm_1213); })
+							  	.attr("cy", function(d) { return yScale(d.spc_1213); })
+							  	.attr("r", function(d) { return circle_radius; })
+							  	.style("opacity", circle_opacity)
+								.style("fill", "purple")
+								.on("mousemove", function(d) {
+							  		tooltip.style("visibility", "visible");
+							  		tooltip.transition()
+							  			.duration(100);
+
+							  		tooltip.html(function() {
+							  			var source = $("#tooltip-template").html();
+							  			var template = Handlebars.compile(source);
+							  			return template({
+							  				"industry": d.industry_name,
+							  				"npm": (d.npm_1213 * 100) + "%",
+							  				"spc": (d.spc_1213 * 100) + "%",
+							  				"year": "2012-13"
+							  			});
+							  		})
+							  		.style("left", (d3.event.pageX) + 50 + "px")
+							  		.style("top", (d3.event.pageY) + "px");
+								});
+
+				var point4 = chart.selectAll(".point")
+								.data(data)
+							  .enter().append("circle")
+							  	.attr("cx", function(d) { return xScale(d.npm_1314); })
+							  	.attr("cy", function(d) { return yScale(d.spc_1314); })
+							  	.attr("r", function(d) { return circle_radius; })
+							  	.style("opacity", circle_opacity)
+								.style("fill", "blue")
+								.on("mousemove", function(d) {
+							  		tooltip.style("visibility", "visible");
+							  		tooltip.transition()
+							  			.duration(100);
+
+							  		tooltip.html(function() {
+							  			var source = $("#tooltip-template").html();
+							  			var template = Handlebars.compile(source);
+							  			return template({
+							  				"industry": d.industry_name,
+							  				"npm": (d.npm_1314 * 100) + "%",
+							  				"spc": (d.spc_1314 * 100) + "%",
+							  				"year": "2013-14"
+							  			});
+							  		})
+							  		.style("left", (d3.event.pageX) + 30 + "px")
+							  		.style("top", (d3.event.pageY) + "px");
+								});	
+
+			});
+
+
+
+
+
+
+	</script>
+</body>
+</html>
